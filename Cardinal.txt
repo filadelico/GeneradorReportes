@@ -1,0 +1,4 @@
+Norte
+Sur
+Oriente
+Occidente
