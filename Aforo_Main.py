@@ -9,14 +9,64 @@ import glob
 import random
 from threading import Thread
 import pickle
+import ntpath
 
 # image sizes for the examples
 SIZE = 500 , 500
 # regex for graphics file format
 FILES_FORMAT_REGEX = '*.[JjPp]*[Gg]'
+FILES_FORMAT_CSV = '*.[Cc][Ss][Vv]'
 
 parallelo=0
 
+
+class SumarDeA3:
+    def __init__(self,archivoentrada,archivosalida):
+        print("Generando Archivo recortado de a 15 min",archivoentrada, "Salida", archivosalida)
+        
+        fout=open(archivosalida,'w')
+        
+        with open(archivoentrada) as fp:
+           line = fp.readline()
+           fout.write(line)
+           print ("depurando primera linea")
+           while True:
+               line1 = fp.readline()
+               line2 = fp.readline()
+               line3 = fp.readline()
+               if not line1 or not line2 or not line3:
+                   break
+               segments1=line1.split(",")
+               segments2=line2.split(",")
+               segments3=line3.split(",")
+               
+               initowrite=segments1[0]+","+segments1[1]+","+segments1[2]+","+segments1[3]+","+segments1[4]+","+segments1[5]+","+segments1[6]
+               
+               peatones=str(int(segments1[7])+int(segments2[7])+int(segments3[7]))
+               part=    str(int(segments1[8])+int(segments2[8])+int(segments3[8]))
+               taxi=    str(int(segments1[9])+int(segments2[9])+int(segments3[9]))
+               moto=   str(int(segments1[10])+int(segments2[10])+int(segments3[10]))
+               bus=    str(int(segments1[11])+int(segments2[11])+int(segments3[11]))
+               cam=    str(int(segments1[12])+int(segments2[12])+int(segments3[12]))
+               mini=   str(int(segments1[13])+int(segments2[13])+int(segments3[13]))
+               ci=     str(int(segments1[14])+int(segments2[14])+int(segments3[14]))
+               tra=    str(int(segments1[15])+int(segments2[15])+int(segments3[15]))
+               scoo=   str(int(segments1[16])+int(segments2[16])+int(segments3[16]))
+               bici=   str(int(segments1[17])+int(segments2[17])+int(segments3[17]))
+               
+               linetowrite=initowrite+','+peatones+','+part+','+taxi+','+moto+','+bus+','+cam+','+mini+','+ci+','+tra+','+scoo+','+bici+'\n'
+               fout.write(linetowrite)
+        
+               
+        fout.close()
+        print ("Archivo 15m creado")
+        
+               
+               
+               
+               
+        
+        
 class reporte:
     def __init__(self,folder,archivosalida):
         self.fl=open(folder+'/'+archivosalida,'w')
@@ -24,7 +74,7 @@ class reporte:
         self.first_time=True        
         
     def generar_reporte_linea(self,Via_Principal,Via_secundaria,Movimiento,Acceso,Salida,DD,MM,AAAA,periodo):    
-        self.leyenda="FECHA,Calle,Carrera,Tipo de Aforo ,Origen,Destino,Periodo,Peaton,Particular,Taxi,Motociclista,Bus,Camion,Minivan,Ciclista,Tractomula,Scooter,Bicitaxi,\n"
+        self.leyenda="FECHA,Calle,Carrera,Movimiento ,Acceso,Salida,Periodo,Peaton,Particular,Taxi,Motociclista,Bus,Camion,Minivan,Ciclista,Tractomula,Scooter,Bicitaxi,\n"
         self.periodo=str(periodo)
         self.Via_Principal=Via_Principal
         self.Via_secundaria=Via_secundaria
@@ -61,14 +111,17 @@ class reporte:
             self.fl.write(self.nl)
 
         else:
+            print (len(Data))
             print ("ERROR: el tamaño de los datos no es el adecuado")
             
-def retornarNombreLinea(path,nombrevideo,numlinea):
+def retornarNombreLinea(path,nombrevideo,numlinea,listnames):
     nombrevideo.rstrip()
     name=nombrevideo.split('.')[0]
-    linname=path+'/'+name+'_linea_'+str(numlinea)+'.csv'
+    lineajpg=listnames[numlinea-1]
+    linsplit=lineajpg.split("_")
+    linname=path+'/'+name+'_'+linsplit[3]+'_'+linsplit[4][-5]+'.csv'
     if not os.path.isfile(linname):
-        print ("ERROR el archivo "+linname+ "no existe, y se esperaba SALIENDO")
+        print ("***************************************ERROR el archivo "+linname+ "no existe, y se esperaba SALIENDO************************************")
     return linname
     
 def getDataFromFile(filelin):
@@ -158,11 +211,13 @@ class LabelTool:
         self.parent.resizable(width=False, height=False)
         
 
+        self.rp=0 
         
 
         # initialize global state
         self.imageDir = ''
         self.imageList= []
+        self.fnlin=[]
         self.save_to_yolo_format = IntVar()
         self.entry_text = StringVar()
         self.entry_text2 = StringVar()
@@ -342,18 +397,26 @@ class LabelTool:
     def loadDir(self):
         folder = filedialog.askdirectory()
         self.imageDir = folder
+        self.rp=reporte(self.imageDir,"reporte_general_carpeta.csv") 
         self.entry_text.set(self.imageDir)
         # get image list
         self.imageList = glob.glob(os.path.join(self.imageDir, FILES_FORMAT_REGEX))
-        
-        print (self.imageList)
+        self.imageList.sort()
+        #print (self.imageList)
         if len(self.imageList) == 0:
             self.print_log('Files .jpg or .png NOT FOUND in the specified dir!')
             return
         if not len(self.imageList) == 0:
             Lineas_de_conteo_halladas="Se encontraron "+ str(len(self.imageList)) +" líneas de conteo" 
+        print("Realizando diccionario de conversion")
+        
+        
+        for pathpfile in self.imageList:
+            self.fnlin.append(ntpath.basename(pathpfile))
+        print (self.fnlin)
             
-            self.print_log(Lineas_de_conteo_halladas)
+            
+        self.print_log(Lineas_de_conteo_halladas)
 
         # default to the 1st image in the collection
         self.cur = 1
@@ -381,19 +444,55 @@ class LabelTool:
         
         Preset_root=self.imageDir+"/Preset"+str(self.cur)+".pickle"
         
+        filereport=self.imageDir+'/'+'merge_video_sources_report.csv'    
+        #FALTABA PACHO
+        if not os.path.isfile(filereport):
+            print("WARNING: LA CARPETA NO CONTIENE ARCHIVO DE REPORTE DE VIDEOS NVR SECRETARIA INTENTANDO GENERAR A PARTIR DE ARCHIVOS")
+            #os.chdir(folder)
+            listaarchivos2=glob.glob(os.path.join(self.imageDir, FILES_FORMAT_CSV))
+            FILE_report_w  = open(filereport, 'w') 
+            FILE_report_w.write("File_Name;Year;Month;Day;Start_Time;Duration;End_Time\n")
+            listaarchivos2.sort()  
+            
+            listalinea1=[]
+            cont=1
+            for filea in listaarchivos2:
+                if filea[-5]=="1":
+                    listalinea1.append(ntpath.basename(filea))
+                  
+            listalinea1.sort()
+            print (listalinea1)
+            archivo_video_ant="0"
+            for archivo in listalinea1:
+                ar_split=archivo.split("_")
+                archivo_video=ar_split[0]+"_"+ar_split[1]+"_"+ar_split[2]+".avi"
+                
+                if(archivo_video_ant!=archivo_video):
+                    ano=ar_split[1][0:4]
+                    mes=ar_split[1][4:6]
+                    dia=ar_split[1][6:8]
+                    start_time=ar_split[1][8:10]+":"+ar_split[1][10:12]+":"+ar_split[1][12:14]
+                    Duration="05"# para videos de contrato monitoreo la duracion es cada 5 minutos. 
+                    end_time=ar_split[1][8:10]+":"+ar_split[1][10:12]+":"+ar_split[1][12:14]     
+                    towrite=archivo_video+";"+ano+";"+mes+";"+dia+";"+start_time+";"+Duration+";"+end_time+"\n"
+                    FILE_report_w.write(towrite)
+                    cont+=1
+                archivo_video_ant=archivo_video
+            FILE_report_w.close()
+        #FALTABA PACHO
+        
+        
         try:
             Preset = pickle.load(open(Preset_root, "rb"))
             print(Preset)
             print("Preset Loaded")
-
             self.entry_text2.set(Preset[1])
             self.entry_text3.set(Preset[2])
             self.entry_text4.set(Preset[3])
-
             self.classcandidate_Class.set(Preset[4])
             self.classcandidate_Type.set(Preset[5])
             self.classcandidate_Cardinal.set(Preset[6])
-            messagebox.showinfo("Configuración", "Se ha cargado la configuración previa almacenada")
+            #messagebox.showinfo("Configuración", "Se ha cargado la configuración previa almacenada")
 
         except (OSError, IOError) as e:
 #            
@@ -445,7 +544,7 @@ class LabelTool:
             self.classcandidate_Class.set(Preset[4])
             self.classcandidate_Type.set(Preset[5])
             self.classcandidate_Cardinal.set(Preset[6])
-            messagebox.showinfo("Configuración", "Se ha cargado la configuración previa almacenada")
+            #messagebox.showinfo("Configuración", "Se ha cargado la configuración previa almacenada")
 
         except (OSError, IOError) as e:
             
@@ -468,7 +567,9 @@ class LabelTool:
             self.loadImage()
         elif self.cur == self.total:
             self.create_images_list()           
-            messagebox.showinfo("Done", "That's All!")
+            messagebox.showinfo("Done", "Cerrando Archivo Total De Reporte")
+            self.rp.cerrarArchivo()
+            SumarDeA3(self.imageDir+"/reporte_general_carpeta.csv",self.imageDir+"/reporte_general_carpeta_15m.csv")
         
         Preset_root=self.imageDir+"/Preset"+str(self.cur)+".pickle"
         print(Preset_root)
@@ -484,7 +585,7 @@ class LabelTool:
             self.classcandidate_Class.set(Preset[4])
             self.classcandidate_Type.set(Preset[5])
             self.classcandidate_Cardinal.set(Preset[6])
-            messagebox.showinfo("Configuración", "Se ha cargado la configuración previa almacenada")
+            #messagebox.showinfo("Configuración", "Se ha cargado la configuración previa almacenada")
 
         except (OSError, IOError) as e:
             
@@ -503,19 +604,20 @@ class LabelTool:
 
     #remove picture
     def Set_Settings(self):
-        if messagebox.askyesno("Guardar configuracion", "¿Está Seguro?"):
-            message='La configuración de la linea de conteo '+ str(self.cur)+' ha sido almacenada correctamente'
-            self.print_log(message)
-            print("Carrera: ",self.entry_text2.get())
-            print("Calle: ",self.entry_text3.get())
-            print("Clase de Aforo: ", self.entry_text4.get())
-            print("Actor Vial: ",self.classcandidate_Class.get())
-            print("Tipo de vía: ",self.classcandidate_Type.get())
-            print("Referencia Cardinal: ",self.classcandidate_Cardinal.get())
-        rp=reporte(self.imageDir,"reporte_general_carpeta.csv")    
+        #if messagebox.askyesno("Guardar configuracion", "¿Está Seguro?"):
+        message='La configuración de la linea de conteo '+ str(self.cur)+' ha sido almacenada correctamente'
+        self.print_log(message)
+        print("Carrera: ",self.entry_text2.get())
+        print("Calle: ",self.entry_text3.get())
+        print("Clase de Aforo: ", self.entry_text4.get())
+        print("Actor Vial: ",self.classcandidate_Class.get())
+        print("Tipo de vía: ",self.classcandidate_Type.get())
+        print("Referencia Cardinal: ",self.classcandidate_Cardinal.get())
+          
         seleccion=self.classcandidate_Class.get()
         filereport=self.imageDir+'/'+'merge_video_sources_report.csv'    
-            
+
+
         Preset = {1:str(self.entry_text2.get()),2:str(self.entry_text3.get()),3:str(self.entry_text4.get()),4:str(self.classcandidate_Class.get()),5:str(self.classcandidate_Type.get()),6:str(self.classcandidate_Cardinal.get())}
 
         Preset_root=self.imageDir+"/Preset"+str(self.cur)+".pickle"
@@ -537,20 +639,12 @@ class LabelTool:
             choices = ["Acceso","Salida"]
             accOsal = self.classcandidate_Type.get()
             
-            if accOsal=="Izquierda-Derecha":
-                Acceso = self.classcandidate_Cardinal.get()
-                Salida=""
-                
-            elif accOsal=="Arriba-Abajo":
-                Salida = self.classcandidate_Cardinal.get()
-                Acceso=""
             
-            
-
+            Acceso = self.classcandidate_Cardinal.get()
+            Salida=""
             
             fieldValues = [self.entry_text2.get(),self.entry_text3.get()]  # we start with blanks for the values
                  
-            
             
             if parallelo:
                 p[-1].join()
@@ -565,14 +659,14 @@ class LabelTool:
                 lindata=line.replace(',',';').split(';')
                 if not (lindata[0]=='File_Name'):
                     #print lindata
-                    linname=retornarNombreLinea(self.imageDir,lindata[0],self.cur)
+                    linname=retornarNombreLinea(self.imageDir,lindata[0],self.cur,self.fnlin)
                     #print linname
                     Data1,Data2,Data3=getDataFromFile(linname)# Data1 ambos sentidos Data2 positivo, Data3, Negativo
                     
                     # rp.generar_reporte_linea(str(fieldValues[0]),str(fieldValues[1]),str(fieldValues[2]),Acceso,Salida,lindata[3],lindata[2],lindata[1],lindata[4])
-                    rp.generar_reporte_linea(str(fieldValues[0]),str(fieldValues[1]),descripcion_via,Acceso,Salida,lindata[3],lindata[2],lindata[1],lindata[4])
+                    self.rp.generar_reporte_linea(str(fieldValues[0]),str(fieldValues[1]),descripcion_via,Acceso,Salida,lindata[3],lindata[2],lindata[1],lindata[4])
                     
-                    rp.agregarData(Data1)
+                    self.rp.agregarData(Data1)
                 else:
                     print ("depurado File_Name")
             
@@ -631,12 +725,12 @@ class LabelTool:
                 lindata=line.replace(',',';').split(';')
                 if not (lindata[0]=='File_Name'):
                     #print lindata
-                    linname=retornarNombreLinea(self.imageDir,lindata[0],self.cur)
+                    linname=retornarNombreLinea(self.imageDir,lindata[0],self.cur,self.fnlin)
                     #print linname
                     Data1,Data2,Data3=getDataFromFile(linname)# Data1 ambos sentidos Data2 positivo, Data3, Negativo
                     
-                    rp.generar_reporte_linea(str(fieldValues[0]),str(fieldValues[1]),descripcion_via,Acceso,Salida,lindata[3],lindata[2],lindata[1],lindata[4])
-                    rp.agregarData(Data2)
+                    self.rp.generar_reporte_linea(str(fieldValues[0]),str(fieldValues[1]),descripcion_via,Acceso,Salida,lindata[3],lindata[2],lindata[1],lindata[4])
+                    self.rp.agregarData(Data2)
                 else:
                     print ("depurado File_Name")
             FILE_report1.close()        
@@ -645,12 +739,12 @@ class LabelTool:
                 lindata=line.replace(',',';').split(';')
                 if not (lindata[0]=='File_Name'):
                     #print lindata
-                    linname=retornarNombreLinea(self.imageDir,lindata[0],self.cur)
+                    linname=retornarNombreLinea(self.imageDir,lindata[0],self.cur,self.fnlin)
                     #print linname
                     Data1,Data2,Data3=getDataFromFile(linname)# Data1 ambos sentidos Data2 positivo, Data3, Negativo
                     
-                    rp.generar_reporte_linea(str(fieldValues[0]),str(fieldValues[1]),descripcion_via,Salida,Acceso,lindata[3],lindata[2],lindata[1],lindata[4])
-                    rp.agregarData(Data3)
+                    self.rp.generar_reporte_linea(str(fieldValues[0]),str(fieldValues[1]),descripcion_via,Salida,Acceso,lindata[3],lindata[2],lindata[1],lindata[4])
+                    self.rp.agregarData(Data3)
                 else:
                     print ("depurado File_Name")
             
@@ -710,12 +804,12 @@ class LabelTool:
                 lindata=line.replace(',',';').split(';')
                 if not (lindata[0]=='File_Name'):
                     #print lindata
-                    linname=retornarNombreLinea(self.imageDir,lindata[0],self.cur)
+                    linname=retornarNombreLinea(self.imageDir,lindata[0],self.cur,self.fnlin)
                     #print linname
                     Data1,Data2,Data3=getDataFromFile(linname)# Data1 ambos sentidos Data2 positivo, Data3, Negativo
                     
-                    rp.generar_reporte_linea(str(fieldValues[0]),str(fieldValues[1]),descripcion_via,Acceso,Salida,lindata[3],lindata[2],lindata[1],lindata[4])
-                    rp.agregarData(Data2)
+                    self.rp.generar_reporte_linea(str(fieldValues[0]),str(fieldValues[1]),descripcion_via,Acceso,Salida,lindata[3],lindata[2],lindata[1],lindata[4])
+                    self.rp.agregarData(Data2)
                 else:
                     print ("depurado File_Name")
             FILE_report1.close()        
@@ -724,12 +818,12 @@ class LabelTool:
                 lindata=line.replace(',',';').split(';')
                 if not (lindata[0]=='File_Name'):
                     #print lindata
-                    linname=retornarNombreLinea(self.imageDir,lindata[0],self.cur)
+                    linname=retornarNombreLinea(self.imageDir,lindata[0],self.cur,self.fnlin)
                     #print linname
                     Data1,Data2,Data3=getDataFromFile(linname)# Data1 ambos sentidos Data2 positivo, Data3, Negativo
                     
-                    rp.generar_reporte_linea(str(fieldValues[0]),str(fieldValues[1]),descripcion_via,Salida,Acceso,lindata[3],lindata[2],lindata[1],lindata[4])
-                    rp.agregarData(Data3)
+                    self.rp.generar_reporte_linea(str(fieldValues[0]),str(fieldValues[1]),descripcion_via,Salida,Acceso,lindata[3],lindata[2],lindata[1],lindata[4])
+                    self.rp.agregarData(Data3)
                 else:
                     print ("depurado File_Name")
 
@@ -789,12 +883,12 @@ class LabelTool:
                 lindata=line.replace(',',';').split(';')
                 if not (lindata[0]=='File_Name'):
                     #print lindata
-                    linname=retornarNombreLinea(self.imageDir,lindata[0],self.cur)
+                    linname=retornarNombreLinea(self.imageDir,lindata[0],self.cur,self.fnlin)
                     #print linname
                     Data1,Data2,Data3=getDataFromFile(linname)# Data1 ambos sentidos Data2 positivo, Data3, Negativo
                     
-                    rp.generar_reporte_linea(str(fieldValues[0]),str(fieldValues[1]),descripcion_via,Acceso,Salida,lindata[3],lindata[2],lindata[1],lindata[4])
-                    rp.agregarData(Data2)
+                    self.rp.generar_reporte_linea(str(fieldValues[0]),str(fieldValues[1]),descripcion_via,Acceso,Salida,lindata[3],lindata[2],lindata[1],lindata[4])
+                    self.rp.agregarData(Data2)
                 else:
                     print ("depurado File_Name")
             FILE_report1.close()        
@@ -803,12 +897,12 @@ class LabelTool:
                 lindata=line.replace(',',';').split(';')
                 if not (lindata[0]=='File_Name'):
                     #print lindata
-                    linname=retornarNombreLinea(self.imageDir,lindata[0],self.cur)
+                    linname=retornarNombreLinea(self.imageDir,lindata[0],self.cur,self.fnlin)
                     #print linname
                     Data1,Data2,Data3=getDataFromFile(linname)# Data1 ambos sentidos Data2 positivo, Data3, Negativo
                     
-                    rp.generar_reporte_linea(str(fieldValues[0]),str(fieldValues[1]),descripcion_via,Salida,Acceso,lindata[3],lindata[2],lindata[1],lindata[4])
-                    rp.agregarData(Data3)
+                    self.rp.generar_reporte_linea(str(fieldValues[0]),str(fieldValues[1]),descripcion_via,Salida,Acceso,lindata[3],lindata[2],lindata[1],lindata[4])
+                    self.rp.agregarData(Data3)
                 else:
                     print ("depurado File_Name")
                     
