@@ -373,8 +373,13 @@ class LabelTool:
         self.idxEntry.pack(side = LEFT)
         self.goBtn = Button(self.ctrPanel, text = 'Go', command = self.gotoImage)
         self.goBtn.pack(side = LEFT)
-        self.btnRm = Button(self.ctrPanel, text='Guardar Configuración', command=self.Set_Settings)
-        self.btnRm.pack(side = LEFT, padx = 25, pady = 3)
+
+        self.btnAuto = Button(self.ctrPanel, text='Generar todos los reportes', command=self.AutoGen)
+        self.btnAuto.pack(side = LEFT, padx = 25, pady = 3)
+        
+        self.btnRm = Button(self.ConfigPanel, text='Guardar Configuración', command=self.Set_Settings)
+        self.btnRm.grid(row=14, column=3, sticky=W+E,padx = 5, pady = 10)
+
      
 
 
@@ -393,6 +398,97 @@ class LabelTool:
 #        self.disp.pack(side = RIGHT)
         self.frame.columnconfigure(1, weight = 1)
         self.frame.rowconfigure(4, weight = 1)
+        
+        # Clear all button
+        self.clBtn = Button(self.ConfigPanel, text="Vaciar todo", command=self.ClearAll)
+        self.clBtn.grid(row=16, column=3, sticky=W+E,padx = 5, pady = 10)
+        
+    def ClearAll(self):
+        self.entry_text2.set("")
+        self.entry_text3.set("")
+        self.entry_text4.set("")
+
+        self.classcandidate_Class.set("")
+        self.classcandidate_Type.set("")
+        self.classcandidate_Cardinal.set("")   
+        
+        Preset_root=self.imageDir+"/Preset"+str(self.cur)+".pickle"
+        
+        try:
+            
+            os.remove(Preset_root)
+            
+            messagebox.showinfo("Configuración", "Se ha eliminado los archivos de configuracion por defecto")
+
+        except (OSError, IOError) as e:
+#            
+            messagebox.showinfo("Configuración", "No existen archivos de configuracion por defecto")
+
+
+    def AutoGen(self):
+        Pickle_Ok=1
+        self.cur=1
+        print("Pickle: "+str(Pickle_Ok))    
+        if messagebox.askyesno("Guardar configuracion", "¿Está Seguro?"):
+            
+            while(self.cur < self.total+1):       
+                Preset_root=self.imageDir+"/Preset"+str(self.cur)+".pickle"
+                self.cur=self.cur+1
+                print(Preset_root)
+                try:
+                    Preset = pickle.load(open(Preset_root, "rb"))
+                    print("Preset Loaded")
+                    if (Preset[1] =="" or Preset[2] =="" or Preset[3] =="" or Preset[4] =="" or Preset[5] =="" or Preset[6] ==""):
+                        messagebox.showinfo("Configuración", "Configuracion previa no valida")
+                        Pickle_Ok=0
+                        print("Pickle no valido")
+                    if os.path.exists(Preset_root):
+                        print("Pickle  valido")
+                        
+                    else:
+                        Pickle_Ok=0 
+                        messagebox.showinfo("Configuración", "Configuracion previa no existe")
+                        
+                except (OSError, FileNotFoundError) as e:
+                    
+                    Pickle_Ok=0
+                    messagebox.showinfo("Configuración", "Preset not found")
+                    
+            print("Pickle: "+str(Pickle_Ok))    
+            self.cur=1
+            if(Pickle_Ok==1):
+                messagebox.showinfo("Configuración", "Todas la configuraciones son válidas, se va a ejecutar el aforo")
+                self.cur=1
+                self.loadImage()
+                self.Set_Settings()
+                
+                while(self.cur < self.total):
+                    self.nextImage2()   
+                    self.Set_Settings()
+
+    def nextImage2(self, event = None):
+
+        if self.cur < self.total:
+            self.cur += 1
+            self.loadImage()
+            Preset_root=self.imageDir+"/Preset"+str(self.cur)+".pickle"
+            print(Preset_root)
+            
+            Preset = pickle.load(open(Preset_root, "rb"))
+            print("Preset Loaded")
+            
+            self.entry_text2.set(Preset[1])
+            self.entry_text3.set(Preset[2])
+            self.entry_text4.set(Preset[3])
+            
+            self.classcandidate_Class.set(Preset[4])
+            self.classcandidate_Type.set(Preset[5])
+            self.classcandidate_Cardinal.set(Preset[6])
+            
+        elif self.cur == self.total:
+            self.create_images_list()           
+            messagebox.showinfo("Done", "That's All!")
+
 
     def loadDir(self):
         folder = filedialog.askdirectory()
@@ -548,15 +644,15 @@ class LabelTool:
 
         except (OSError, IOError) as e:
             
-            self.entry_text2.set("")
-            self.entry_text3.set("")
+            #self.entry_text2.set("")
+            #self.entry_text3.set("")
             self.entry_text4.set("")
 
             self.classcandidate_Class.set("")
             self.classcandidate_Type.set("")
             self.classcandidate_Cardinal.set("")
-            foo={1:"",2:"",3:"",4:"",5:"",6:""}
-            pickle.dump(foo, open(Preset_root, "wb"))
+            #foo={1:"",2:"",3:"",4:"",5:"",6:""}
+            #pickle.dump(foo, open(Preset_root, "wb"))
             print("Preset not found")
 
 
@@ -589,15 +685,15 @@ class LabelTool:
 
         except (OSError, IOError) as e:
             
-            self.entry_text2.set("")
-            self.entry_text3.set("")
+            #self.entry_text2.set("")
+            #self.entry_text3.set("")
             self.entry_text4.set("")
 
             self.classcandidate_Class.set("")
             self.classcandidate_Type.set("")
             self.classcandidate_Cardinal.set("")
-            foo={1:"",2:"",3:"",4:"",5:"",6:""}
-            pickle.dump(foo, open(Preset_root, "wb"))
+            #foo={1:"",2:"",3:"",4:"",5:"",6:""}
+            #pickle.dump(foo, open(Preset_root, "wb"))
             print("Preset not found")
 
 
